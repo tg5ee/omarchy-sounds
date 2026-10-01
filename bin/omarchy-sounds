@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+# omarchy-sounds — control Omarchy Sounds.
+
+conf="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy-sounds"
+cfg="$conf/config"
+
+# The event list: installed copy first, then the repo copy (running from a checkout).
+events_file="${XDG_DATA_HOME:-$HOME/.local/share}/omarchy-sounds/events.tsv"
+[ -f "$events_file" ] || events_file="$(dirname "$(readlink -f "$0")")/../share/events.tsv"
+[ -f "$events_file" ] || { echo "Can't find events.tsv — run install.sh again." >&2; exit 1; }
+
+# EVENTS=(ids…), plus label/hint/group/icon per id
+declare -A LABEL HINT GROUP ICON
+EVENTS=()
+while IFS=$'\t' read -r id label hint group icon; do
+  [[ -z $id || $id == \#* ]] && continue
+  EVENTS+=("$id"); LABEL[$id]=$label; HINT[$id]=$hint; GROUP[$id]=$group; ICON[$id]=$icon
+done < "$events_file"
+
+usage() {
+  cat <<USAGE
+Usage: omarchy-sounds <command>
+
+  status               Show settings and which sound files are present
+  events               List every event and what triggers it
+  on | off | toggle    Turn all sounds on/off
+  enable EVENT         Turn one event on
+  disable EVENT        Turn one event off
+  volume 0.0-1.0       Set playback volume
+  test [EVENT]         Play one event, or all of them in turn
+  preview EVENT        Play one event even if it's switched off
+  dir                  Print the sounds folder
+  log [on|off]         Record every trigger; with no argument, watch the log
+  json                 Print settings as JSON (used by the bar panel)
+USAGE
+}
+
+setvar() {  # setvar KEY VALUE
+  if grep -q "^$1=" "$cfg"; then sed -i "s|^$1=.*|$1=$2|" "$cfg"; else echo "$1=$2" >> "$cfg"; fi
+}
+
+evvar() { local v=${1^^}; echo "${v//-/_}"; }
+
+sound_file() {  # first matching file for an event, same order omarchy-sounds-play uses
+  local ext
+  for ext in wav ogg oga flac mp3; do
+    [ -f "$conf/sounds/$1.$ext" ] && { echo "$conf/sounds/$1.$ext"; return; }
+  done
+}
+
+json_str() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '"%s"' "$s"; }
+
+valid_event() {
+  [[ -n $1 && -n ${LABEL[$1]+x} ]] && return 0
+  echo "Unknown event '$1'. See: omarchy-sounds events" >&2; exit 1
+}
+
+[ -f "$cfg" ] || { echo "No config at $cfg — run install.sh first." >&2; exit 1; }
+
+case "$1" in
+  status)
+    . "$cfg"
+    echo "Sounds: $([ "$ENABLED" = 1 ] && echo on || echo off)   Volume: $VOLUME"
+    echo "Folder: $conf/sounds"
+    last=
+    for e in "${EVENTS[@]}"; do
+      [ "${GROUP[$e]}" != "$last" ] && { last=${GROUP[$e]}; printf '\n  %s\n' "$last"; }
+      v=$(evvar "$e"); state=$([ "${!v:-1}" = 1 ] && echo on || echo off)
+      f=$(sound_file "$e")
+      printf '    %-22s %-4s %s\n' "$e" "$state" "${f:+${f##*/}}${f:-(no file yet)}"
+    done ;;
+  events)
+    last=
+    for e in "${EVENTS[@]}"; do
+      [ "${GROUP[$e]}" != "$last" ] && { last=${GROUP[$e]}; printf '\n%s\n' "$last"; }
+      printf '  %-22s %s\n' "$e" "${HINT[$e]}"
+    done ;;
+  on)      setvar ENABLED 1; echo "Sounds on" ;;
+  off)     setvar ENABLED 0; echo "Sounds off" ;;
+  toggle)  . "$cfg"; if [ "$ENABLED" = 1 ]; then "$0" off; else "$0" on; fi ;;
+  enable)  valid_event "$2"; setvar "$(evvar "$2")" 1; echo "$2 on" ;;
+  disable) valid_event "$2"; setvar "$(evvar "$2")" 0; echo "$2 off" ;;
+  volume)
+    [[ $2 =~ ^(0(\.[0-9]+)?|1(\.0+)?)$ ]] || { echo "Volume must be between 0.0 and 1.0" >&2; exit 1; }
+    setvar VOLUME "$2"; echo "Volume $2" ;;
+  test)
+    if [ -n "$2" ]; then valid_event "$2"; omarchy-sounds-play --wait "$2"
+    else for e in "${EVENTS[@]}"; do [ -n "$(sound_file "$e")" ] && { echo "$e"; omarchy-sounds-play --wait "$e"; }; done; fi ;;
+  preview) valid_event "$2"; omarchy-sounds-play --force "$2" ;;
+  dir)     echo "$conf/sounds" ;;
+  log)
+    log="${XDG_RUNTIME_DIR:-/tmp}/omarchy-sounds/events.log"
+    case "$2" in
+      on)  setvar LOG 1; echo "Logging triggers to $log" ;;
+      off) setvar LOG 0; echo "Logging off" ;;
+      *)   . "$cfg"; [ "${LOG:-0}" = 1 ] || echo "Logging is off; turn it on with: omarchy-sounds log on"
+           mkdir -p "${log%/*}"; touch "$log"; exec tail -f "$log" ;;
+    esac ;;
+  json)
+    . "$cfg"
+    printf '{"enabled":%s,"volume":%s,"dir":%s,"events":[' \
+      "$([ "$ENABLED" = 1 ] && echo true || echo false)" "${VOLUME:-0.6}" "$(json_str "$conf/sounds")"
+    sep=
+    for e in "${EVENTS[@]}"; do
+      v=$(evvar "$e"); f=$(sound_file "$e")
+      printf '%s{"id":"%s","label":%s,"hint":%s,"group":%s,"icon":"%s","enabled":%s,"file":%s}' "$sep" "$e" \
+        "$(json_str "${LABEL[$e]}")" "$(json_str "${HINT[$e]}")" "$(json_str "${GROUP[$e]}")" "${ICON[$e]}" \
+        "$([ "${!v:-1}" = 1 ] && echo true || echo false)" "$(json_str "${f##*/}")"
+      sep=,
+    done
+    printf ']}\n' ;;
+  *)       usage ;;
+esac

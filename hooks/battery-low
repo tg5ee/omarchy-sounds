@@ -1,0 +1,3 @@
+#!/bin/bash
+# Omarchy Sounds: installed to ~/.config/omarchy/hooks/battery-low.d/ by install.sh
+omarchy-sounds-play battery-low

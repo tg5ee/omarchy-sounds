@@ -1,0 +1,3 @@
+#!/bin/bash
+# Omarchy Sounds: installed to ~/.config/omarchy/hooks/theme-set.d/ by install.sh
+omarchy-sounds-play theme-change

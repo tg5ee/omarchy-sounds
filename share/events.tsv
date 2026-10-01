@@ -1,0 +1,31 @@
+# id	label	hint	group	icon (Nerd Font codepoint)
+# The one list of sound events. The CLI, the bar panel and the README table all
+# read it; the hooks that fire each event live in hypr/, bin/omarchy-sounds-daemon
+# and hooks/.
+startup	Startup	When you log in	System	f0342
+shutdown	Shutdown	Shut down, reboot or log out	System	f0425
+lock	Lock	The screen locks	System	f033e
+unlock	Unlock	You unlock the screen	System	f0fc6
+auth-prompt	Password prompt	An app asks for your password	System	f0bc4
+click	Mouse click	Any mouse button	Input	f0cfd
+super	Super key	Tapping Super on its own	Input	f030c
+volume-keys	Volume keys	Volume up, down or mute	Input	f057e
+window-open	Window open	A window opens	Windows	f0704
+window-close	Window close	A window closes	Windows	f0158
+maximize	Fullscreen	A window goes fullscreen or maximized	Windows	f0293
+restore	Leave fullscreen	A window goes back to normal size	Windows	f0294
+workspace	Workspace switch	You change workspace	Windows	f0570
+attention	Needs attention	A window asks for attention	Windows	f023b
+menu-open	Menu open	Omarchy menu or app launcher opens	Windows	f0bab
+menu-close	Menu close	Omarchy menu or app launcher closes	Windows	f006d
+notification	Notification	A normal notification arrives	Notifications	f009a
+notification-critical	Critical notification	Urgent alerts and errors	Notifications	f0d59
+screenshot	Screenshot	A screenshot is saved	Notifications	f0e51
+device-connect	Device connected	USB or Bluetooth device plugged in	Devices & power	f0339
+device-disconnect	Device disconnected	USB or Bluetooth device removed	Devices & power	f033a
+charger-connect	Charger plugged in	Power cable connected	Devices & power	f06a5
+charger-disconnect	Charger unplugged	Running on battery	Devices & power	f06a6
+battery-low	Low battery	Omarchy's 10% warning	Devices & power	f0083
+battery-critical	Critical battery	Battery at or below 5%	Devices & power	f10cd
+theme-change	Theme changed	You switch Omarchy theme	Omarchy	f03d8
+update-complete	Update finished	omarchy update completes	Omarchy	f06b0

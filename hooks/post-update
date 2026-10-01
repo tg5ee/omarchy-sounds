@@ -1,0 +1,3 @@
+#!/bin/bash
+# Omarchy Sounds: installed to ~/.config/omarchy/hooks/post-update.d/ by install.sh
+omarchy-sounds-play update-complete
